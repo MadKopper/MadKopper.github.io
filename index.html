@@ -1,22 +1,110 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <meta charset="utf-8">
-    <title>我的第一个网站</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>黎明工作室</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 50px;
-            background-color: #f0f0f0;
+        /* 全局样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        h1 {
-            color: #333;
+
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', Roboto, 'Helvetica Neue', sans-serif;
+            background-color: #f9fafc;
+            color: #1e2a3e;
+            line-height: 1.6;
+        }
+
+        /* 导航栏 */
+        nav {
+            background-color: #ffffff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .nav-container a {
+            text-decoration: none;
+            color: #2c3e50;
+            transition: color 0.2s;
+            padding: 0.5rem 0;
+        }
+
+        .nav-container a:hover {
+            color: #e67e22;
+        }
+
+        /* 主内容区 */
+        .hero {
+            text-align: center;
+            padding: 5rem 2rem;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9edf2 100%);
+            margin-bottom: 2rem;
+        }
+
+        .hero h1 {
+            font-size: 5rem;
+            letter-spacing: 4px;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .hero p {
+            font-size: 1.5rem;
+            color: #4a627a;
+            font-weight: 300;
+        }
+
+        /* 底部占位（留空备用） */
+        footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            border-top: 1px solid #e2e8f0;
+            margin-top: 2rem;
         }
     </style>
 </head>
 <body>
-    <h1>你好，世界！🌍</h1>
-    <p>这是我的第一个网站，完全免费！</p>
+
+    <!-- 导航栏：三个选项 -->
+    <nav>
+        <div class="nav-container">
+            <a href="about.html">关于我们</a>
+            <a href="join.html">加入我们</a>
+            <a href="dawnwiki.html">黎明百科</a>
+        </div>
+    </nav>
+
+    <!-- 主视觉区：DAWN + 黎明工作室 -->
+    <div class="hero">
+        <h1>DAWN</h1>
+        <p>黎明工作室</p>
+    </div>
+
+    <!-- 页面下方预留区域（暂时空着） -->
+    <footer>
+        <!-- 这里以后可以放介绍、联系方式等 -->
+        这里是预留区域，后续会放入更多内容。
+    </footer>
+
 </body>
 </html>
