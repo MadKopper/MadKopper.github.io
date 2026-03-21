@@ -5,20 +5,145 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>黎明百科 - 黎明工作室</title>
     <style>
-        /* 样式同上，保持一致 */
-        * { margin:0; padding:0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', 'PingFang SC', Roboto, sans-serif; background-color: #f9fafc; color: #1e2a3e; line-height: 1.6; }
-        nav { background-color: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); padding: 1rem 0; }
-        .nav-container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: center; gap: 3rem; font-size: 1.1rem; font-weight: 500; }
-        .nav-container a { text-decoration: none; color: #2c3e50; transition: color 0.2s; }
-        .nav-container a:hover { color: #e67e22; }
-        .container { max-width: 800px; margin: 3rem auto; padding: 0 2rem; }
-        h1 { font-size: 2.5rem; margin-bottom: 1rem; color: #2c3e50; }
-        p { margin-bottom: 1rem; }
-        footer { text-align: center; padding: 2rem; color: #7f8c8d; border-top: 1px solid #e2e8f0; margin-top: 3rem; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', Roboto, 'Helvetica Neue', sans-serif;
+            background-color: #f9fafc;
+            color: #1e2a3e;
+            line-height: 1.6;
+        }
+
+        /* 导航栏样式（与主页统一） */
+        nav {
+            background-color: #ffffff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .nav-container a {
+            text-decoration: none;
+            color: #2c3e50;
+            transition: color 0.2s;
+            padding: 0.5rem 0;
+        }
+
+        .nav-container a:hover {
+            color: #e67e22;
+        }
+
+        /* 百科主体：左右两列布局 */
+        .wiki-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+            display: flex;
+            gap: 2rem;
+            min-height: 500px;
+        }
+
+        /* 左侧可滚动列表 */
+        .sidebar {
+            width: 200px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            overflow-y: auto;
+            max-height: 500px;
+            padding: 0.5rem 0;
+        }
+
+        .sidebar ul {
+            list-style: none;
+        }
+
+        .sidebar li {
+            padding: 0.8rem 1rem;
+            margin: 0.2rem 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .sidebar li:hover {
+            background-color: #f0f2f5;
+        }
+
+        .sidebar li.active {
+            background-color: #e67e22;
+            color: white;
+        }
+
+        /* 右侧内容区 */
+        .content {
+            flex: 1;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            padding: 2rem;
+        }
+
+        .content h2 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+
+        .content p {
+            margin-bottom: 1rem;
+        }
+
+        /* 页脚 */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: #7f8c8d;
+            border-top: 1px solid #e2e8f0;
+            margin-top: 2rem;
+        }
+
+        /* 小屏幕适配：左右改为上下排列 */
+        @media (max-width: 768px) {
+            .wiki-container {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                max-height: 200px;
+            }
+            .sidebar ul {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .sidebar li {
+                display: inline-block;
+                width: auto;
+                margin: 0.2rem;
+            }
+        }
     </style>
 </head>
 <body>
+
     <nav>
         <div class="nav-container">
             <a href="index.html">首页</a>
@@ -28,14 +153,75 @@
         </div>
     </nav>
 
-    <div class="container">
-        <h1>黎明百科</h1>
-        <p>这里是黎明百科，收录各种有趣的知识和灵感。</p>
-        <p>内容正在建设中，敬请期待……</p>
+    <div class="wiki-container">
+        <!-- 左侧可滚动数字列表 -->
+        <div class="sidebar">
+            <ul id="number-list">
+                <li data-id="1">1</li>
+                <li data-id="2">2</li>
+                <li data-id="3">3</li>
+                <li data-id="4">4</li>
+                <!-- 你可以继续添加更多数字，例如 5、6…… -->
+            </ul>
+        </div>
+
+        <!-- 右侧内容展示区 -->
+        <div class="content" id="content-area">
+            <h2>欢迎来到黎明百科</h2>
+            <p>请点击左侧的数字，查看对应的内容。</p>
+        </div>
     </div>
 
     <footer>
         © 黎明工作室
     </footer>
+
+    <script>
+        // 定义不同数字对应的内容
+        const contentMap = {
+            1: {
+                title: "数字 1：黎明起源",
+                text: "黎明工作室创立于2024年，以创意和科技为核心，致力于打造温暖人心的数字产品。"
+            },
+            2: {
+                title: "数字 2：核心团队",
+                text: "我们是一群来自设计、开发和内容领域的梦想家，相信简洁与美的力量。"
+            },
+            3: {
+                title: "数字 3：主要项目",
+                text: "目前已启动“晨曦计划”“百科共建”等多个项目，期待你的参与。"
+            },
+            4: {
+                title: "数字 4：未来展望",
+                text: "未来我们将拓展更多领域，让黎明之光点亮更多角落。"
+            }
+        };
+
+        // 获取元素
+        const listItems = document.querySelectorAll('#number-list li');
+        const contentArea = document.getElementById('content-area');
+
+        // 为每个数字绑定点击事件
+        listItems.forEach(item => {
+            item.addEventListener('click', function() {
+                // 移除其他项的 active 样式
+                listItems.forEach(li => li.classList.remove('active'));
+                // 为当前点击项添加 active 样式
+                this.classList.add('active');
+
+                const id = this.getAttribute('data-id');
+                const data = contentMap[id];
+
+                if (data) {
+                    contentArea.innerHTML = `
+                        <h2>${data.title}</h2>
+                        <p>${data.text}</p>
+                    `;
+                } else {
+                    contentArea.innerHTML = `<h2>未知条目</h2><p>暂未收录该数字的内容。</p>`;
+                }
+            });
+        });
+    </script>
 </body>
 </html>
