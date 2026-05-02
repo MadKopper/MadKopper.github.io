@@ -371,12 +371,14 @@ const dinoGame = {
     obstacles: [],
     clouds: [],
     groundY: 0,
-    speed: 5,
+    speed: 3,
     score: 0,
     highScore: parseInt(localStorage.getItem('dinoHigh') || '0'),
     gameOver: false,
     started: false,
     frame: 0,
+    obstacleTimer: 0,
+    obstacleInterval: 80,
 
     init() {
         this.canvas = document.getElementById('dinoCanvas');
@@ -389,11 +391,13 @@ const dinoGame = {
         this.dino.onGround = true;
         this.obstacles = [];
         this.clouds = [];
-        this.speed = 5;
+        this.speed = 3;
         this.score = 0;
         this.gameOver = false;
         this.started = false;
         this.frame = 0;
+        this.obstacleTimer = 0;
+        this.obstacleInterval = 80;
         this.draw();
     },
 
@@ -407,13 +411,28 @@ const dinoGame = {
     },
 
     spawnObstacle() {
-        const h = Math.random() < 0.5 ? 30 : 45;
-        this.obstacles.push({
-            x: this.canvas.width,
-            y: this.groundY - h,
-            w: 15 + Math.random() * 10,
-            h: h
-        });
+        const type = Math.random() < 0.25 ? 'bird' : 'cactus';
+        if (type === 'cactus') {
+            const h = Math.random() < 0.5 ? 35 : 50;
+            this.obstacles.push({
+                type: 'cactus',
+                x: this.canvas.width,
+                y: this.groundY - h,
+                w: 20,
+                h: h
+            });
+        } else {
+            // Bird at different heights
+            const birdY = [this.groundY - 30, this.groundY - 55, this.groundY - 75];
+            this.obstacles.push({
+                type: 'bird',
+                x: this.canvas.width,
+                y: birdY[Math.floor(Math.random() * birdY.length)],
+                w: 35,
+                h: 20,
+                wingFrame: 0
+            });
+        }
     },
 
     spawnCloud() {
@@ -437,15 +456,25 @@ const dinoGame = {
             this.dino.onGround = true;
         }
 
-        // Speed up
-        this.speed = 5 + Math.floor(this.frame / 2000) * 0.3;
+        // Speed up slowly
+        this.speed = 3 + Math.floor(this.frame / 3000) * 0.3;
 
         // Score
         this.score = Math.floor(this.frame / 5);
 
-        // Obstacles
-        if (this.frame % Math.max(35, 60 - this.frame / 200) === 0) this.spawnObstacle();
-        for (let o of this.obstacles) o.x -= this.speed;
+        // Obstacle spawning with counter
+        this.obstacleTimer++;
+        if (this.obstacleTimer >= this.obstacleInterval) {
+            this.spawnObstacle();
+            this.obstacleTimer = 0;
+            this.obstacleInterval = 40 + Math.floor(Math.random() * 40);
+        }
+
+        // Move obstacles
+        for (let o of this.obstacles) {
+            o.x -= this.speed;
+            if (o.type === 'bird') o.wingFrame++;
+        }
         this.obstacles = this.obstacles.filter(o => o.x + o.w > 0);
 
         // Clouds
@@ -456,7 +485,8 @@ const dinoGame = {
         // Collision
         for (let o of this.obstacles) {
             const dx = this.dino.x, dy = this.dino.y, dw = this.dino.w, dh = this.dino.h;
-            if (dx < o.x + o.w && dx + dw > o.x + 4 && dy < o.y + o.h && dy + dh > o.y + 4) {
+            const pad = 4;
+            if (dx < o.x + o.w - pad && dx + dw > o.x + pad && dy < o.y + o.h - pad && dy + dh > o.y + pad) {
                 this.gameOver = true;
                 if (this.score > this.highScore) {
                     this.highScore = this.score;
@@ -511,14 +541,30 @@ const dinoGame = {
     drawObstacle(o) {
         const { ctx } = this;
         ctx.fillStyle = '#535353';
-        // Cactus-like shape
-        ctx.fillRect(o.x + o.w * 0.3, o.y, o.w * 0.4, o.h);
-        // Arms
-        if (o.h > 35) {
-            ctx.fillRect(o.x, o.y + 10, o.w * 0.3, 5);
-            ctx.fillRect(o.x, o.y + 5, 5, 10);
-            ctx.fillRect(o.x + o.w * 0.7, o.y + 15, o.w * 0.3, 5);
-            ctx.fillRect(o.x + o.w - 5, o.y + 10, 5, 10);
+        if (o.type === 'cactus') {
+            // Tall cactus: trunk + small arms
+            const trunkW = o.w * 0.35;
+            const trunkX = o.x + (o.w - trunkW) / 2;
+            ctx.fillRect(trunkX, o.y, trunkW, o.h);
+            // Arms for tall cactus
+            if (o.h > 40) {
+                ctx.fillRect(o.x, o.y + o.h * 0.3, o.w * 0.3, 4);
+                ctx.fillRect(o.x, o.y + o.h * 0.15, 4, o.h * 0.2);
+                ctx.fillRect(o.x + o.w * 0.7, o.y + o.h * 0.5, o.w * 0.3, 4);
+                ctx.fillRect(o.x + o.w - 4, o.y + o.h * 0.35, 4, o.h * 0.2);
+            }
+        } else {
+            // Bird (pterodactyl)
+            const wingUp = Math.floor(o.wingFrame / 10) % 2 === 0;
+            ctx.fillRect(o.x, o.y + 8, o.w, 4); // body
+            ctx.fillRect(o.x + o.w - 8, o.y + 4, 8, 8); // head
+            if (wingUp) {
+                ctx.fillRect(o.x + 5, o.y, 15, 8); // wings up
+                ctx.fillRect(o.x + 5, o.y, 4, 4);
+            } else {
+                ctx.fillRect(o.x + 5, o.y + 12, 15, 8); // wings down
+                ctx.fillRect(o.x + 5, o.y + 16, 4, 4);
+            }
         }
     },
 
