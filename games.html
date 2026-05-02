@@ -438,13 +438,13 @@ const dinoGame = {
         }
 
         // Speed up
-        this.speed = 5 + Math.floor(this.frame / 500) * 0.5;
+        this.speed = 5 + Math.floor(this.frame / 2000) * 0.3;
 
         // Score
         this.score = Math.floor(this.frame / 5);
 
         // Obstacles
-        if (this.frame % Math.max(60, 120 - this.frame / 50) === 0) this.spawnObstacle();
+        if (this.frame % Math.max(35, 60 - this.frame / 200) === 0) this.spawnObstacle();
         for (let o of this.obstacles) o.x -= this.speed;
         this.obstacles = this.obstacles.filter(o => o.x + o.w > 0);
 
@@ -478,19 +478,34 @@ const dinoGame = {
         ctx.fillStyle = '#fff';
         ctx.fillRect(d.x + 23, d.y - 7, 3, 3);
         ctx.fillStyle = '#535353';
-        // Legs
-        if (d.onGround && this.frame % 20 < 10) {
-            ctx.fillRect(d.x + 8, d.y + 20, 5, 15);
-            ctx.fillRect(d.x + 18, d.y + 20, 5, 15);
-        } else if (!d.onGround) {
-            ctx.fillRect(d.x + 8, d.y + 20, 5, 12);
-            ctx.fillRect(d.x + 18, d.y + 20, 5, 12);
-        } else {
-            ctx.fillRect(d.x + 8, d.y + 20, 5, 15);
-            ctx.fillRect(d.x + 18, d.y + 20, 5, 15);
-        }
         // Tail
         ctx.fillRect(d.x, d.y + 5, 8, 5);
+
+        // Legs - 4 frame running animation
+        if (!d.onGround) {
+            // In air: legs tucked
+            ctx.fillRect(d.x + 8, d.y + 20, 5, 10);
+            ctx.fillRect(d.x + 18, d.y + 20, 5, 10);
+        } else {
+            const phase = Math.floor(this.frame / 5) % 4;
+            if (phase === 0) {
+                // Left leg forward, right back
+                ctx.fillRect(d.x + 6, d.y + 20, 5, 15);
+                ctx.fillRect(d.x + 20, d.y + 20, 5, 10);
+            } else if (phase === 1) {
+                // Both legs together (mid-step)
+                ctx.fillRect(d.x + 10, d.y + 20, 5, 15);
+                ctx.fillRect(d.x + 16, d.y + 20, 5, 15);
+            } else if (phase === 2) {
+                // Right leg forward, left back
+                ctx.fillRect(d.x + 6, d.y + 20, 5, 10);
+                ctx.fillRect(d.x + 20, d.y + 20, 5, 15);
+            } else {
+                // Both legs slightly apart (between steps)
+                ctx.fillRect(d.x + 8, d.y + 20, 5, 13);
+                ctx.fillRect(d.x + 17, d.y + 20, 5, 13);
+            }
+        }
     },
 
     drawObstacle(o) {
