@@ -127,78 +127,105 @@
 <footer>黎明工作室</footer>
 
 <script>
-    const CELL = 40;
-    const COLS = 11;
-    const ROWS = 11;
-    const W = canvas => CELL * COLS + CELL / 2;
-    const H = canvas => CELL * ROWS * 0.866 + CELL * 0.5;
+    const CELL = 35;
+    const SQRT3 = Math.sqrt(3);
+    const RADIUS = 6;
+    const WALL_PROB = 0.18;
 
-    let board = [];
-    let catX, catY;
+    let board = {};
+    let catQ, catR;
     let gameOver = false;
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
+    function hexKey(q, r) { return q + ',' + r; }
+
     function init() {
         gameOver = false;
-        board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
-        catX = Math.floor(COLS / 2);
-        catY = Math.floor(ROWS / 2);
-        // Randomly place ~15% walls, but keep cat area clear
-        for (let r = 0; r < ROWS; r++) {
-            for (let c = 0; c < COLS; c++) {
-                if (Math.abs(r - catY) > 2 || Math.abs(c - catX) > 2) {
-                    if (Math.random() < 0.15) board[r][c] = 1;
+        board = {};
+        catQ = 0;
+        catR = 0;
+
+        for (let q = -RADIUS; q <= RADIUS; q++) {
+            for (let r = -RADIUS; r <= RADIUS; r++) {
+                const s = -q - r;
+                if (Math.abs(s) <= RADIUS) {
+                    if (Math.abs(q) <= 2 && Math.abs(r) <= 2 && Math.abs(s) <= 2) continue;
+                    if (Math.random() < WALL_PROB) board[hexKey(q, r)] = 1;
                 }
             }
         }
-        canvas.width = W(canvas);
-        canvas.height = H(canvas);
+
+        const cw = (2 * RADIUS + 1) * CELL * 1.5 + CELL;
+        const ch = (2 * RADIUS + 1) * CELL * SQRT3 + CELL;
+        canvas.width = cw;
+        canvas.height = ch;
         draw();
     }
 
-    function hexCenter(row, col) {
+    function hexToPixel(q, r) {
         return {
-            x: col * CELL + CELL / 2 + (row % 2) * CELL / 2,
-            y: row * CELL * 0.866 + CELL * 0.433
+            x: CELL * (1.5 * q) + canvas.width / 2,
+            y: CELL * (SQRT3 / 2 * q + SQRT3 * r) + canvas.height / 2
         };
     }
 
-    function drawHex(cx, cy, r) {
+    function pixelToHex(px, py) {
+        const x = px - canvas.width / 2;
+        const y = py - canvas.height / 2;
+        const q = (2 / 3 * x) / CELL;
+        const r = (-1 / 3 * x + SQRT3 / 3 * y) / CELL;
+        return hexRound(q, r);
+    }
+
+    function hexRound(q, r) {
+        const s = -q - r;
+        let rq = Math.round(q), rr = Math.round(r), rs = Math.round(s);
+        const dq = Math.abs(rq - q), dr = Math.abs(rr - r), ds = Math.abs(rs - s);
+        if (dq > dr && dq > ds) rq = -rr - rs;
+        else if (dr > ds) rr = -rq - rs;
+        return { q: rq, r: rr };
+    }
+
+    function drawHex(cx, cy, size) {
         ctx.beginPath();
         for (let i = 0; i < 6; i++) {
-            const angle = Math.PI / 180 * (60 * i - 30);
-            const x = cx + r * Math.cos(angle);
-            const y = cy + r * Math.sin(angle);
+            const angle = Math.PI / 180 * (60 * i);
+            const x = cx + size * Math.cos(angle);
+            const y = cy + size * Math.sin(angle);
             i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
         ctx.closePath();
     }
 
-    function getNeighborDirs(row) {
-        if (row % 2 === 0) {
-            return [[0, -1], [0, 1], [-1, 0], [-1, 1], [1, 0], [1, 1]];
-        }
-        return [[0, -1], [0, 1], [-1, -1], [-1, 0], [1, -1], [1, 0]];
+    function getNeighbors(q, r) {
+        return [
+            [q+1, r], [q-1, r], [q, r+1], [q, r-1], [q+1, r-1], [q-1, r+1]
+        ];
     }
 
-    function bfs(startX, startY) {
+    function isInGrid(q, r) {
+        return Math.abs(q) <= RADIUS && Math.abs(r) <= RADIUS && Math.abs(-q-r) <= RADIUS;
+    }
+
+    function hexDist(q, r) {
+        return (Math.abs(q) + Math.abs(r) + Math.abs(-q-r)) / 2;
+    }
+
+    function bfs(startQ, startR) {
         const visited = new Set();
-        visited.add(startY * COLS + startX);
-        const queue = [{ x: startX, y: startY, dist: 0 }];
+        visited.add(hexKey(startQ, startR));
+        const queue = [{ q: startQ, r: startR, dist: 0 }];
         while (queue.length > 0) {
             const cur = queue.shift();
-            if (cur.y === 0 || cur.y === ROWS - 1 || cur.x === 0 || cur.x === COLS - 1) {
+            if (hexDist(cur.q, cur.r) === RADIUS) {
                 return cur.dist;
             }
-            const dirs = getNeighborDirs(cur.y);
-            for (const [dx, dy] of dirs) {
-                const nx = cur.x + dx, ny = cur.y + dy;
-                const key = ny * COLS + nx;
-                if (ny >= 0 && ny < ROWS && nx >= 0 && nx < COLS
-                    && !visited.has(key) && board[ny][nx] === 0) {
+            for (const [nq, nr] of getNeighbors(cur.q, cur.r)) {
+                const key = hexKey(nq, nr);
+                if (!visited.has(key) && isInGrid(nq, nr) && !board[key]) {
                     visited.add(key);
-                    queue.push({ x: nx, y: ny, dist: cur.dist + 1 });
+                    queue.push({ q: nq, r: nr, dist: cur.dist + 1 });
                 }
             }
         }
@@ -206,26 +233,25 @@
     }
 
     function moveCat() {
-        let bestDist = bfs(catX, catY);
+        let bestDist = bfs(catQ, catR);
         if (bestDist === 999) {
             gameOver = true;
             draw();
             return;
         }
-        const dirs = getNeighborDirs(catY);
-        let moved = false;
-        for (const [dx, dy] of dirs) {
-            const nx = catX + dx, ny = catY + dy;
-            if (ny >= 0 && ny < ROWS && nx >= 0 && nx < COLS && board[ny][nx] === 0) {
-                const d = bfs(nx, ny);
-                if (d < bestDist) {
-                    catX = nx; catY = ny;
-                    moved = true;
-                    break;
-                }
+        let bestQ = catQ, bestR = catR, bestD = bestDist;
+        for (const [nq, nr] of getNeighbors(catQ, catR)) {
+            if (!isInGrid(nq, nr)) continue;
+            const key = hexKey(nq, nr);
+            if (board[key]) continue;
+            const d = bfs(nq, nr);
+            if (d < bestD) {
+                bestD = d; bestQ = nq; bestR = nr;
             }
         }
-        if (!moved) {
+        if (bestQ !== catQ || bestR !== catR) {
+            catQ = bestQ; catR = bestR;
+        } else {
             gameOver = true;
         }
         draw();
@@ -233,18 +259,15 @@
 
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        for (let r = 0; r < ROWS; r++) {
-            for (let c = 0; c < COLS; c++) {
-                const { x, y } = hexCenter(r, c);
-                const state = (r === catY && c === catX) ? 2 : board[r][c];
-                drawHex(x, y, CELL * 0.42);
-                if (state === 1) {
-                    ctx.fillStyle = '#555';
-                } else if (state === 2) {
-                    ctx.fillStyle = '#e67e22';
-                } else {
-                    ctx.fillStyle = '#dfe6ed';
-                }
+        for (let q = -RADIUS; q <= RADIUS; q++) {
+            for (let r = -RADIUS; r <= RADIUS; r++) {
+                if (!isInGrid(q, r)) continue;
+                const { x, y } = hexToPixel(q, r);
+                const key = hexKey(q, r);
+                const isCat = (q === catQ && r === catR);
+                const isWall = !!board[key];
+                drawHex(x, y, CELL * 0.9);
+                ctx.fillStyle = isCat ? '#e67e22' : (isWall ? '#555' : '#dfe6ed');
                 ctx.fill();
                 ctx.strokeStyle = '#ccc';
                 ctx.lineWidth = 1;
@@ -258,7 +281,7 @@
             ctx.font = 'bold 32px sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            const msg = bfs(catX, catY) === 999
+            const msg = bfs(catQ, catR) === 999
                 ? '你赢了！小猫被围住了！'
                 : '小猫逃跑了！再试试？';
             ctx.fillText(msg, canvas.width / 2, canvas.height / 2);
@@ -270,23 +293,13 @@
         const rect = canvas.getBoundingClientRect();
         const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
         const my = (e.clientY - rect.top) * (canvas.height / rect.height);
-        let best = null, bestDist = Infinity;
-        for (let r = 0; r < ROWS; r++) {
-            for (let c = 0; c < COLS; c++) {
-                const { x, y } = hexCenter(r, c);
-                const d = Math.hypot(mx - x, my - y);
-                if (d < CELL * 0.42 && d < bestDist) {
-                    bestDist = d;
-                    best = { r, c };
-                }
-            }
-        }
-        if (best && board[best.r][best.c] === 0
-            && !(best.r === catY && best.c === catX)) {
-            board[best.r][best.c] = 1;
-            draw();
-            setTimeout(moveCat, 150);
-        }
+        const hex = pixelToHex(mx, my);
+        const key = hexKey(hex.q, hex.r);
+        if (!isInGrid(hex.q, hex.r)) return;
+        if (board[key] || (hex.q === catQ && hex.r === catR)) return;
+        board[key] = 1;
+        draw();
+        setTimeout(moveCat, 150);
     });
 
     document.getElementById('restartBtn').addEventListener('click', init);
