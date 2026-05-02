@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小游戏 - 黎明工作室</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', Roboto, 'Helvetica Neue', sans-serif;
+            background-color: #f9fafc;
+            color: #1e2a3e;
+            line-height: 1.6;
+        }
+
+        nav {
+            background-color: #ffffff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .nav-container a {
+            text-decoration: none;
+            color: #2c3e50;
+            transition: color 0.2s;
+            padding: 0.5rem 0;
+        }
+
+        .nav-container a:hover {
+            color: #e67e22;
+        }
+
+        .game-header {
+            text-align: center;
+            padding: 2rem 2rem 1rem;
+        }
+
+        .game-header h1 {
+            font-size: 2rem;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .game-header p {
+            font-size: 1rem;
+            color: #4a627a;
+        }
+
+        .game-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem 2rem 3rem;
+        }
+
+        canvas {
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            background: #fff;
+            cursor: pointer;
+        }
+
+        #restartBtn {
+            margin-top: 1.5rem;
+            padding: 0.7rem 2rem;
+            font-size: 1rem;
+            background-color: #e67e22;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        #restartBtn:hover {
+            background-color: #d35400;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: #7f8c8d;
+            border-top: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="nav-container">
+        <a href="index.html">首页</a>
+        <a href="about.html">关于我们</a>
+        <a href="join.html">加入我们</a>
+        <a href="dawnwiki.html">黎明百科</a>
+        <a href="games.html">小游戏</a>
+    </div>
+</nav>
+
+<div class="game-header">
+    <h1>围小猫</h1>
+    <p>点击空白格子放上障碍，别让小猫逃出边缘！</p>
+</div>
+
+<div class="game-area">
+    <canvas id="gameCanvas"></canvas>
+    <button id="restartBtn">重新开始</button>
+</div>
+
+<footer>黎明工作室</footer>
+
+<script>
+    const CELL = 40;
+    const COLS = 11;
+    const ROWS = 11;
+    const W = canvas => CELL * COLS + CELL / 2;
+    const H = canvas => CELL * ROWS * 0.866 + CELL * 0.5;
+
+    let board = [];
+    let catX, catY;
+    let gameOver = false;
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function init() {
+        gameOver = false;
+        board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+        catX = Math.floor(COLS / 2);
+        catY = Math.floor(ROWS / 2);
+        // Randomly place ~15% walls, but keep cat area clear
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                if (Math.abs(r - catY) > 2 || Math.abs(c - catX) > 2) {
+                    if (Math.random() < 0.15) board[r][c] = 1;
+                }
+            }
+        }
+        canvas.width = W(canvas);
+        canvas.height = H(canvas);
+        draw();
+    }
+
+    function hexCenter(row, col) {
+        return {
+            x: col * CELL + CELL / 2 + (row % 2) * CELL / 2,
+            y: row * CELL * 0.866 + CELL * 0.433
+        };
+    }
+
+    function drawHex(cx, cy, r) {
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = Math.PI / 180 * (60 * i - 30);
+            const x = cx + r * Math.cos(angle);
+            const y = cy + r * Math.sin(angle);
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+    }
+
+    function getNeighborDirs(row) {
+        if (row % 2 === 0) {
+            return [[0, -1], [0, 1], [-1, -1], [-1, 0], [1, -1], [1, 0]];
+        }
+        return [[0, -1], [0, 1], [-1, 0], [-1, 1], [1, 0], [1, 1]];
+    }
+
+    function bfs(startX, startY) {
+        const visited = new Set();
+        visited.add(startY * COLS + startX);
+        const queue = [{ x: startX, y: startY, dist: 0 }];
+        while (queue.length > 0) {
+            const cur = queue.shift();
+            if (cur.y === 0 || cur.y === ROWS - 1 || cur.x === 0 || cur.x === COLS - 1) {
+                return cur.dist;
+            }
+            const dirs = getNeighborDirs(cur.y);
+            for (const [dx, dy] of dirs) {
+                const nx = cur.x + dx, ny = cur.y + dy;
+                const key = ny * COLS + nx;
+                if (ny >= 0 && ny < ROWS && nx >= 0 && nx < COLS
+                    && !visited.has(key) && board[ny][nx] === 0) {
+                    visited.add(key);
+                    queue.push({ x: nx, y: ny, dist: cur.dist + 1 });
+                }
+            }
+        }
+        return 999;
+    }
+
+    function moveCat() {
+        let bestDist = bfs(catX, catY);
+        if (bestDist === 999) {
+            gameOver = true;
+            draw();
+            return;
+        }
+        const dirs = getNeighborDirs(catY);
+        let moved = false;
+        for (const [dx, dy] of dirs) {
+            const nx = catX + dx, ny = catY + dy;
+            if (ny >= 0 && ny < ROWS && nx >= 0 && nx < COLS && board[ny][nx] === 0) {
+                const d = bfs(nx, ny);
+                if (d < bestDist) {
+                    catX = nx; catY = ny;
+                    moved = true;
+                    break;
+                }
+            }
+        }
+        if (!moved) {
+            gameOver = true;
+        }
+        draw();
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                const { x, y } = hexCenter(r, c);
+                const state = (r === catY && c === catX) ? 2 : board[r][c];
+                drawHex(x, y, CELL * 0.42);
+                if (state === 1) {
+                    ctx.fillStyle = '#555';
+                } else if (state === 2) {
+                    ctx.fillStyle = '#e67e22';
+                } else {
+                    ctx.fillStyle = '#dfe6ed';
+                }
+                ctx.fill();
+                ctx.strokeStyle = '#ccc';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+        }
+        if (gameOver) {
+            ctx.fillStyle = 'rgba(0,0,0,0.45)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 32px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const msg = bfs(catX, catY) === 999
+                ? '你赢了！小猫被围住了！'
+                : '小猫逃跑了！再试试？';
+            ctx.fillText(msg, canvas.width / 2, canvas.height / 2);
+        }
+    }
+
+    canvas.addEventListener('click', e => {
+        if (gameOver) return;
+        const rect = canvas.getBoundingClientRect();
+        const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+        const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+        let best = null, bestDist = Infinity;
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                const { x, y } = hexCenter(r, c);
+                const d = Math.hypot(mx - x, my - y);
+                if (d < CELL * 0.42 && d < bestDist) {
+                    bestDist = d;
+                    best = { r, c };
+                }
+            }
+        }
+        if (best && board[best.r][best.c] === 0
+            && !(best.r === catY && best.c === catX)) {
+            board[best.r][best.c] = 1;
+            draw();
+            setTimeout(moveCat, 150);
+        }
+    });
+
+    document.getElementById('restartBtn').addEventListener('click', init);
+    init();
+</script>
+</body>
+</html>
